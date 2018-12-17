@@ -22,7 +22,7 @@ public struct ExampleValueLoggerImplementation: LogHandler {
     }
 
     public func log(level: LogLevel, message: String, file: String, function: String, line: UInt) {
-        print("\(self.formatLevel(level)): \(message) \(self.metadata?.description ?? "")")
+        print("\(self.formatLevel(level)): \(message) \(self.metadata.description)")
     }
 
     private func formatLevel(_ level: LogLevel) -> String {
@@ -49,16 +49,12 @@ public struct ExampleValueLoggerImplementation: LogHandler {
         }
     }
 
-    public var metadata: LoggingMetadata? {
+    public var metadata: LoggingMetadata {
         get {
             return self._metadata
         }
         set {
-            if let newValue = newValue {
-                self._metadata = newValue
-            } else {
-                self._metadata.removeAll()
-            }
+            self._metadata = newValue
         }
     }
 
@@ -89,6 +85,7 @@ public final class ExampleLoggerImplementation: LogHandler {
         formatter.locale = Locale(identifier: "en_US")
         formatter.calendar = Calendar(identifier: .gregorian)
         self.formatter = formatter
+        self._metadata = LoggingMetadata()
     }
 
     private func formatLevel(_ level: LogLevel) -> String {
@@ -111,13 +108,13 @@ public final class ExampleLoggerImplementation: LogHandler {
     }
 
     private var prettyMetadata: String?
-    private var _metadata: LoggingMetadata? {
+    private var _metadata: LoggingMetadata {
         didSet {
-            self.prettyMetadata = !(self._metadata?.isEmpty ?? true) ? self._metadata!.map { "\($0)=\($1)" }.joined(separator: " ") : nil
+            self.prettyMetadata = !(self._metadata.isEmpty) ? self._metadata.map { "\($0)=\($1)" }.joined(separator: " ") : nil
         }
     }
 
-    public var metadata: LoggingMetadata? {
+    public var metadata: LoggingMetadata {
         get {
             return self.lock.withLock { self._metadata }
         }
@@ -128,14 +125,11 @@ public final class ExampleLoggerImplementation: LogHandler {
 
     public subscript(metadataKey metadataKey: String) -> String? {
         get {
-            return self.lock.withLock { self._metadata?[metadataKey] }
+            return self.lock.withLock { self._metadata[metadataKey] }
         }
         set {
             self.lock.withLock {
-                if nil == self._metadata {
-                    self._metadata = [:]
-                }
-                self._metadata![metadataKey] = newValue
+                self._metadata[metadataKey] = newValue
             }
         }
     }

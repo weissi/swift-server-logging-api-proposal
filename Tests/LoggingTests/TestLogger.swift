@@ -31,7 +31,10 @@ internal struct TestLoggger: LogHandler {
     }
 
     func log(level: LogLevel, message: String, file: String, function: String, line: UInt) {
-        let metadata = self.metadata ?? MDC.global.metadata // use MDC unless set
+        // I don't think this would be a correct way of using those, rather a merge is needed:
+        // let metadata = self.metadata ?? MDC.global.metadata // use MDC unless set
+        let metadata = MDC.global.metadata.merging(self.metadata, uniquingKeysWith: { l, r in r })
+
         var l = logger // local copy since we gonna override its metadata
         l.metadata = metadata
         l.log(level: level, message: message, file: file, function: function, line: line)
@@ -49,25 +52,22 @@ internal struct TestLoggger: LogHandler {
         }
     }
 
-    // TODO: would be nice to deleagte to local copy of logger but StdoutLogger is a reference type. why?
-    private var _metadata: LoggingMetadata?
+    // TODO: would be nice to delegate to local copy of logger but StdoutLogger is a reference type. why?
+    private var _metadata = LoggingMetadata()
     subscript(metadataKey metadataKey: LoggingMetadata.Key) -> LoggingMetadata.Value? {
         get {
             // return self.logger[metadataKey: metadataKey]
-            return self.metadataLock.withLock { self._metadata?[metadataKey] }
+            return self.metadataLock.withLock { self._metadata[metadataKey] }
         }
         set {
             // return logger[metadataKey: metadataKey] = newValue
             self.metadataLock.withLock {
-                if nil == self._metadata {
-                    self._metadata = LoggingMetadata()
-                }
-                self._metadata![metadataKey] = newValue
+                self._metadata[metadataKey] = newValue
             }
         }
     }
 
-    public var metadata: LoggingMetadata? {
+    public var metadata: LoggingMetadata {
         get {
             // return self.logger.metadata
             return self.metadataLock.withLock { self._metadata }
@@ -109,7 +109,7 @@ internal class Recorder: History {
     private let lock = NSLock()
     private var _entries = [LogEntry]()
 
-    func record(level: LogLevel, metadata: LoggingMetadata?, message: String) {
+    func record(level: LogLevel, metadata: LoggingMetadata, message: String) {
         return self.lock.withLock {
             self._entries.append(LogEntry(level: level, metadata: metadata, message: message))
         }
@@ -154,22 +154,22 @@ internal extension History {
 
 internal struct LogEntry {
     let level: LogLevel
-    let metadata: LoggingMetadata?
+    let metadata: LoggingMetadata
     let message: String
 }
 
 extension History {
-    func assertExist(level: LogLevel, metadata: LoggingMetadata?, message: String, file: StaticString = #file, line: UInt = #line) {
+    func assertExist(level: LogLevel, metadata: LoggingMetadata, message: String, file: StaticString = #file, line: UInt = #line) {
         let entry = self.find(level: level, metadata: metadata, message: message)
         XCTAssertNotNil(entry, "entry not found: \(level), \(String(describing: metadata)), \(message)", file: file, line: line)
     }
 
-    func assertNotExist(level: LogLevel, metadata: LoggingMetadata?, message: String, file: StaticString = #file, line: UInt = #line) {
+    func assertNotExist(level: LogLevel, metadata: LoggingMetadata, message: String, file: StaticString = #file, line: UInt = #line) {
         let entry = self.find(level: level, metadata: metadata, message: message)
         XCTAssertNil(entry, "entry was found: \(level), \(String(describing: metadata)), \(message)]", file: file, line: line)
     }
 
-    func find(level: LogLevel, metadata: LoggingMetadata?, message: String) -> LogEntry? {
+    func find(level: LogLevel, metadata: LoggingMetadata, message: String) -> LogEntry? {
         return self.entries.first { entry in
             entry.level == level && entry.message == message && entry.metadata ?? [:] == metadata ?? [:]
         }
@@ -200,7 +200,7 @@ public class MDC {
         }
     }
 
-    public var metadata: LoggingMetadata? {
+    public var metadata: LoggingMetadata {
         return self.lock.withLock {
             self.storage[self.threadId]
         }
@@ -212,18 +212,18 @@ public class MDC {
         }
     }
 
-    public func with(metadata: LoggingMetadata?, _ body: () throws -> Void) rethrows {
-        metadata?.forEach { self[$0] = $1 }
+    public func with(metadata: LoggingMetadata, _ body: () throws -> Void) rethrows {
+        metadata.forEach { self[$0] = $1 }
         defer {
-            metadata?.keys.forEach { self[$0] = nil }
+            metadata.keys.forEach { self[$0] = nil }
         }
         try body()
     }
 
-    public func with<T>(metadata: LoggingMetadata?, _ body: () throws -> T) rethrows -> T {
-        metadata?.forEach { self[$0] = $1 }
+    public func with<T>(metadata: LoggingMetadata, _ body: () throws -> T) rethrows -> T {
+        metadata.forEach { self[$0] = $1 }
         defer {
-            metadata?.keys.forEach { self[$0] = nil }
+            metadata.keys.forEach { self[$0] = nil }
         }
         return try body()
     }
