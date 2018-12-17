@@ -189,6 +189,12 @@ struct ExploringPerformanceExample {
             outerLogger.info("Example logging")
         }
 
+        measureAndPrint(desc: "example") {
+            outerLogger.withMetadata(["hello": "helloooooooo!"]) { scoped in
+                scoped.info("EXAMPLE??????")
+            }
+        }
+
         /*
         [some-id][2018-12-17 05:50:14 +0000][info][only-once=ONLY_1 per-data=some-metadata id=some-id additional=some-per-context-info] Hello
         [some-id][2018-12-17 05:50:14 +0000][info][id=some-id per-data=some-metadata additional=some-per-context-info] Hello Second Time

@@ -92,6 +92,14 @@ public struct Logger {
     }
 }
 
+public extension Logger {
+    public func withMetadata(_ additionalMetadata: @escaping @autoclosure () -> LoggingMetadata, _ block: (Logger) -> Void) {
+        let l = Logger(ProxyLogHandler(underlying: self.handler, additionalMetadata: additionalMetadata))
+
+        return block(l)
+    }
+}
+
 public enum LogLevel: Int {
     case trace
     case debug
@@ -199,6 +207,52 @@ public final class StdoutLogger: LogHandler {
         }
     }
 }
+
+final class ProxyLogHandler: LogHandler {
+    private var underlying: LogHandler
+    private let additionalMetadata: () -> LoggingMetadata
+
+    init(underlying: LogHandler, additionalMetadata: @escaping @autoclosure () -> LoggingMetadata) {
+        self.underlying = underlying
+        self.additionalMetadata = additionalMetadata
+    }
+
+    func log(level: LogLevel, message: String, file: String, function: String, line: UInt) {
+        if level >= self.logLevel {
+            self.underlying.metadata = self.additionalMetadata()
+            self.underlying.log(level: level, message: message, file: file, function: function, line: line)
+        }
+    }
+
+    private var _logLevel: LogLevel = .info
+    public var logLevel: LogLevel {
+        get {
+            return self.underlying.logLevel
+        }
+        set {
+            self.underlying.logLevel = newValue
+        }
+    }
+
+    public var metadata: LoggingMetadata {
+        get {
+            return self.underlying.metadata
+        }
+        set {
+            self.underlying.self.metadata = newValue
+        }
+    }
+
+    public subscript(metadataKey metadataKey: LoggingMetadata.Key) -> LoggingMetadata.Value? {
+        get {
+            return self.underlying.metadata[metadataKey]
+        }
+        set {
+            self.underlying.metadata[metadataKey] = newValue
+        }
+    }
+}
+
 
 private extension NSLock {
     func withLock<T>(_ body: () -> T) -> T {
