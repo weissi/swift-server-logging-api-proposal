@@ -62,7 +62,7 @@ public struct Logger {
     }
 
     @inlinable
-    public subscript(metadataKey metadataKey: String) -> String? {
+    public subscript(metadataKey metadataKey: LoggingMetadata.Key) -> LoggingMetadata.Value? {
         get {
             return self.handler[metadataKey: metadataKey]
         }
@@ -100,32 +100,28 @@ public enum LogLevel: Int {
     case error
 }
 
-// logging with String value
-//    [some-id][2018-12-17 10:26:41 +0000][info][id=some-id trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 per-data0=some-metadata additional=some-per-context-info] Hello 100
+// logging with String value, "before"
+//    measuring: 100 logs:
+//    // [some-id][2018-12-17 10:26:41 +0000][info][id=some-id trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 per-data0=some-metadata additional=some-per-context-info] Hello 100
 //    7ms 655μs, 7ms 50μs, 6ms 155μs, 5ms 825μs, 21ms 72μs, 6ms 314μs, 6ms 96μs, 10ms 315μs, 5ms 653μs, 7ms 46μs,
 //    measuring: no 100 logs:
 //    1ms 223μs, 1ms 295μs, 1ms 260μs, 1ms 340μs, 1ms 386μs, 1ms 419μs, 1ms 525μs, 1ms 476μs, 1ms 482μs, 1ms 608μs,
 //
 // String:String, with didSet rendering
-//    2018-12-17 11:35:49 +0000 infoid=some-id additional=some-per-context-info per-data0=some-metadata trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 Hello 100
+//    measuring: 100 logs:
+//    // 2018-12-17 11:35:49 +0000 id=some-id additional=some-per-context-info per-data0=some-metadata trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 Hello 100
 //    10ms 915μs, 6ms 531μs, 6ms 68μs, 5ms 735μs, 5ms 870μs, 9ms 493μs, 6ms 564μs, 7ms 400μs, 10ms 455μs, 7ms 205μs,
 //    measuring: no 10000 logs:
 //    1ms 643μs, 1ms 592μs, 1ms 671μs, 1ms 579μs, 1ms 602μs, 1ms 565μs, 1ms 560μs, 1ms 539μs, 1ms 510μs, 1ms 499μs,
 //
-// String:Any, logging with lazy Any rendering on actual logging
-//    [some-id][2018-12-17 10:37:53 +0000][info][per-data0=some-metadata id=some-id trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 additional=some-per-context-info] Hello 100
-//    7ms 645μs, 7ms 209μs, 6ms 759μs, 15ms 522μs, 7ms 45μs, 6ms 743μs, 12ms 90μs, 7ms 779μs, 7ms 417μs, 6ms 832μs,
-//    ^~~~~~~ no change here is good and expected, seems the Any does not hurt as much, and we allow not paying the cost:
-//    measuring: no 10000 logs:
-//    543μs 951ns, 543μs 951ns, 548μs 958ns, 527μs 24ns, 590μs 85ns, 510μs 931ns, 512μs 3ns, 511μs 50ns, 509μs 977ns, 522μs 971ns,
-//    ^~~~~~ compared to at least always above 1ms times for when we don't actually render any logs (e.g. because log level)
-//
 // String:Any, avoiding didSet, rendering only when actually printing
-//    20ms 616μs, 7ms 309μs, 6ms 725μs, 11ms 933μs, 6ms 517μs, 6ms 186μs, 5ms 877μs, 10ms 561μs, 7ms 166μs, 6ms 537μs,
+//    measuring: 100 logs:
+//    // [2018-12-17 12:04:45 +0000][info][additional=some-per-context-info trace=0-AF7651916CD43DD8448EB211C80319C-F067AA0BA902B7-0 per-data0=some-metadata id=some-id] Hello 100
+//    20ms 89μs, 6ms 877μs, 8ms 257μs, 10ms 628μs, 6ms 299μs, 5ms 718μs, 5ms 723μs, 5ms 362μs, 8ms 759μs, 6ms 155μs,
 //    measuring: no 10000 logs:
-//    699μs 43ns, 699μs 996ns, 645μs 41ns, 668μs 48ns, 698μs 924ns, 789μs 999ns, 648μs 21ns, 604μs 33ns, 633μs 1ns, 751μs 972ns,
-// public typealias LoggingMetadata = [String: Any]
-public typealias LoggingMetadata = [String: String]
+//    675μs 82ns, 394μs 940ns, 393μs 986ns, 393μs 986ns, 393μs 986ns, 394μs 940ns, 395μs 59ns, 394μs 940ns, 395μs 59ns, 486μs 16ns,
+public typealias LoggingMetadata = [String: Any]
+// public typealias LoggingMetadata = [String: String]
 
 extension LogLevel: Comparable {
     public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
@@ -175,16 +171,11 @@ public final class StdoutLogger: LogHandler {
         }
     }
 
-    private var prettyMetadata: String = ""
-    private var _metadata: LoggingMetadata {
-        didSet {
-            self.prettyMetadata = !(self._metadata.isEmpty) ? self._metadata.map { "\($0)=\($1)" }.joined(separator: " ") : ""
-        }
-    }
-
+    private var _metadata: LoggingMetadata
     public func log(level: LogLevel, message: String, file _: String, function _: String, line _: UInt) {
         if level >= self.logLevel {
-            print("\(Date()) \(level)\(self.prettyMetadata) \(message)")
+            let prettyMetadata = !(self._metadata.isEmpty) ? self._metadata.map { "\($0)=\($1)" }.joined(separator: " ") : ""
+            print("[\(Date())][\(level)][\(prettyMetadata)] \(message)")
         }
     }
 
@@ -197,7 +188,7 @@ public final class StdoutLogger: LogHandler {
         }
     }
 
-    public subscript(metadataKey metadataKey: String) -> String? {
+    public subscript(metadataKey metadataKey: LoggingMetadata.Key) -> LoggingMetadata.Value? {
         get {
             return self.lock.withLock { self._metadata[metadataKey] }
         }

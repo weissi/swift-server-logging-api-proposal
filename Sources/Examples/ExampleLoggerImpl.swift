@@ -123,7 +123,7 @@ public final class ExampleLoggerImplementation: LogHandler {
         }
     }
 
-    public subscript(metadataKey metadataKey: String) -> String? {
+    public subscript(metadataKey metadataKey: LoggingMetadata.Key) -> LoggingMetadata.Value? {
         get {
             return self.lock.withLock { self._metadata[metadataKey] }
         }

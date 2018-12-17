@@ -71,12 +71,7 @@ class Library {
         case .some(let trace):
             renderedMetadata = [
                 "per-data0": "some-metadata",
-                // TODO: So that's the thing I'm a bit worried about with the string metadata:
-                // TODO: this rendering is a bit costly, though we'd likely want to carry around the integers rather than the string repr...
-                // TODO: Sadly with String metadata we always have to render it, even if we don't even log here AT ALL :-(
-                // TODO: solution 1) pass around the trace metadata as String all the time in the envelope, this
-                // TODO: solution 2) "whatever", yeah it costs
-                "trace": "\(trace)"
+                "trace": trace // by allowing Any as value, we delay the rendering operation
             ]
         case .none:
             renderedMetadata = [
@@ -91,7 +86,7 @@ class Library {
     func handle(userCallback: (inout SomeContext, DataContainer) -> ()) {
         let perContextMetadata: LoggingMetadata = context.log.metadata
 
-        let trace = TraceContext(// assume we have it, it came with the envelope
+        let trace = TraceContext( // assume we have it, it came with the container
             version: 0,
             traceId: (790211418057950173, 9532127138774266268),
             parentId: 67667974448284343,
@@ -99,16 +94,14 @@ class Library {
         )
         let data = DataContainer(data: "example", traceContext: trace)
 
-        // TODO: forced into rendering the internal trace representations from ints to string repr
         let moreMetadata = extractMeta(from: data, withBase: perContextMetadata)
-
         var allMetadata: LoggingMetadata = perContextMetadata
         allMetadata.merge(moreMetadata, uniquingKeysWith: { (l, r) in r })
 
         context.log.metadata = allMetadata
-        defer {
-            context.log.metadata = perContextMetadata
-        }
+        defer { context.log.metadata = perContextMetadata }
+
+        // invoke user code, which may or may not log; if expensive to render metadata is logged we don't pay the price for it
         userCallback(&context, data)
     }
 }
@@ -117,13 +110,12 @@ struct ExploringPerformanceExample {
 
 
     func main() {
-        let outerLogger = Logging.make("other")
+        let outerLogger = Logging.make("outer")
 
         let library = Library()
 
         measureAndPrint(desc: "set one metadata") {
-            library.handle {
-                context, data in
+            library.handle { context, data in
                 context.log.metadata["only-once"] = "ONLY_1"
                 context.log.info("Hello")
             }
@@ -188,7 +180,7 @@ struct ExploringPerformanceExample {
         measureAndPrint(desc: "no 10000 logs") {
             for _ in 0...100 {
                 library.handle { context, data in
-                    ()
+                    return () // no logging == no overhead from "rendering" some metadata
                 }
             }
         }
