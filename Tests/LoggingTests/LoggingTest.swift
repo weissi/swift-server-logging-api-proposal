@@ -42,15 +42,15 @@ class LoggingTest: XCTestCase {
         logger.trace({
             XCTFail("trace should not be called")
             return "trace"
-        }(), error: TestError.boom)
+        }())
         logger.debug({
             XCTFail("debug should not be called")
             return "debug"
-        }(), error: TestError.boom)
+        }())
         logger.info({
             XCTFail("info should not be called")
             return "info"
-        }(), error: TestError.boom)
+        }())
         logger.warning({
             "warning"
         }(), error: TestError.boom)
@@ -58,9 +58,9 @@ class LoggingTest: XCTestCase {
             "error"
         }(), error: TestError.boom)
         XCTAssertEqual(2, logging.history.entries.count, "expected number of entries to match")
-        logging.history.assertNotExist(level: .trace, message: "trace", error: TestError.boom)
-        logging.history.assertNotExist(level: .debug, message: "debug", error: TestError.boom)
-        logging.history.assertNotExist(level: .info, message: "info", error: TestError.boom)
+        logging.history.assertNotExist(level: .trace, message: "trace", error: nil)
+        logging.history.assertNotExist(level: .debug, message: "debug", error: nil)
+        logging.history.assertNotExist(level: .info, message: "info", error: nil)
         logging.history.assertExist(level: .warning, message: "warning", error: TestError.boom)
         logging.history.assertExist(level: .error, message: "error", error: TestError.boom)
     }
