@@ -152,10 +152,22 @@ class LoggingTest: XCTestCase {
         logger.logLevel = .error
         logger[metadataKey: "foo"] = .lazy({ "\(self.dontEvaluateThisString())" })
 
-        logger.debug(self.dontEvaluateThisString())
+        logger.debug(self.dontEvaluateThisString(), metadata: ["foo": "\(self.dontEvaluateThisString())"])
         logger.trace(self.dontEvaluateThisString())
         logger.info(self.dontEvaluateThisString())
         logger.warning(self.dontEvaluateThisString())
         logger.log(level: .warning, message: self.dontEvaluateThisString())
+    }
+
+    func testLocalMetadata() {
+        let testLogging = TestLogging()
+        Logging.bootstrap(testLogging.make)
+        var logger = Logging.make("\(#function)")
+        logger[metadataKey: "foo"] = "bar"
+        logger[metadataKey: "bar"] = "baz"
+        logger.info("hello world!")
+        logger.warning("hello world!", metadata: ["bar": "qux"])
+        testLogging.history.assertExist(level: .info, message: "hello world!", metadata: ["foo": "bar", "bar": "baz"])
+        testLogging.history.assertExist(level: .warning, message: "hello world!", metadata: ["foo": "bar", "bar": "qux"])
     }
 }
