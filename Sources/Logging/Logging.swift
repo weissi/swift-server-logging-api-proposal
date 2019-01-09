@@ -10,7 +10,7 @@ public protocol LogHandler {
     // `Logger`'s `info`, `error`, or `warning` functions.
     //
     // An implementation does not need to check the log level because that has been done before by `Logger` itself.
-    func log(level: Logging.Level, message: String, metadata: Logging.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt)
+    func log(level: Logging.Level, message: String, metadata: Logging.Metadata, error: Error?, file: StaticString, function: StaticString, line: UInt)
 
     // This adds metadata to a place the concrete logger considers appropriate. Some loggers
     // might not support this feature at all.
@@ -34,9 +34,13 @@ public struct Logger {
     }
 
     @inlinable
-    func log(level: Logging.Level, message: @autoclosure () -> String, metadata: @autoclosure () -> Logging.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+    func log(level: Logging.Level, message: @autoclosure () -> String, metadata meta: @autoclosure () -> Logging.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
         if self.logLevel <= level {
-            self.handler.log(level: level, message: message(), metadata: metadata(), error: error, file: file, function: function, line: line)
+            var metadata = self.metadata
+            if let m = meta() {
+                metadata.merge(m, uniquingKeysWith: { _, new in new })
+            }
+            self.handler.log(level: level, message: message(), metadata: metadata, error: error, file: file, function: function, line: line)
         }
     }
 
@@ -199,7 +203,7 @@ private class MUXLogHandler: LogHandler {
         }
     }
 
-    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata, error: Error?, file: StaticString, function: StaticString, line: UInt) {
         self.handlers.forEach { handler in
             handler.log(level: level, message: message, metadata: metadata, error: error, file: file, function: function, line: line)
         }
@@ -240,6 +244,11 @@ internal final class StdoutLogger: LogHandler {
 
     public init(label: String) {}
 
+    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+        let prettyMetadata = !metadata.isEmpty ? self.prettify(metadata) : nil
+        print("\(self.timestamp()) \(level)\(prettyMetadata.map { " \($0)" } ?? "") \(message)\(error.map { " \($0)" } ?? "")")
+    }
+
     private var _logLevel: Logging.Level = .info
     public var logLevel: Logging.Level {
         get {
@@ -252,18 +261,7 @@ internal final class StdoutLogger: LogHandler {
         }
     }
 
-    private var prettyMetadata: String?
-    private var _metadata = Logging.Metadata() {
-        didSet {
-            self.prettyMetadata = self.prettify(self._metadata)
-        }
-    }
-
-    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
-        let prettyMetadata = metadata?.isEmpty ?? true ? self.prettyMetadata : self.prettify(self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new }))
-        print("\(self.timestamp()) \(level)\(prettyMetadata.map { " \($0)" } ?? "") \(message)\(error.map { " \($0)" } ?? "")")
-    }
-
+    private var _metadata = Logging.Metadata()
     public var metadata: Logging.Metadata {
         get {
             return self.lock.withLock { self._metadata }

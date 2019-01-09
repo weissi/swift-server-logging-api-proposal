@@ -26,7 +26,7 @@ public final class ConfigLogging {
             self.config = config
         }
 
-        public func log(level: Logging.Level, message: String, metadata: Logging.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+        public func log(level: Logging.Level, message: String, metadata: Logging.Metadata, error: Error?, file: StaticString, function: StaticString, line: UInt) {
             self.logger.log(level: level, message: message, metadata: metadata, error: error) { text in
                 print(text)
             }

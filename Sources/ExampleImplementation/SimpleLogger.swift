@@ -21,8 +21,8 @@ internal final class SimpleLogger {
         self.formatter = formatter
     }
 
-    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata?, error: Error?, printer: (String) -> Void) {
-        let prettyMetadata = metadata?.isEmpty ?? true ? self.prettyMetadata : self.prettify(self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new }))
+    public func log(level: Logging.Level, message: String, metadata: Logging.Metadata, error: Error?, printer: (String) -> Void) {
+        let prettyMetadata = !metadata.isEmpty ? self.prettify(metadata) : nil
         printer("[\(self.label)] \(self.formatter.string(from: Date()))\(prettyMetadata.map { " \($0)" } ?? "") \(level): \(message)\(error.map { " \($0)" } ?? "")")
     }
 

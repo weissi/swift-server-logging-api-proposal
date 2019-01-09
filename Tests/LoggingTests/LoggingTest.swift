@@ -163,11 +163,13 @@ class LoggingTest: XCTestCase {
         let testLogging = TestLogging()
         Logging.bootstrap(testLogging.make)
         var logger = Logging.make("\(#function)")
-        logger[metadataKey: "foo"] = "bar"
+        logger.info("hello world!", metadata: ["foo": "bar"])
         logger[metadataKey: "bar"] = "baz"
-        logger.info("hello world!")
-        logger.warning("hello world!", metadata: ["bar": "qux"])
-        testLogging.history.assertExist(level: .info, message: "hello world!", metadata: ["foo": "bar", "bar": "baz"])
-        testLogging.history.assertExist(level: .warning, message: "hello world!", metadata: ["foo": "bar", "bar": "qux"])
+        logger[metadataKey: "baz"] = "qux"
+        logger.warning("hello world!")
+        logger.error("hello world!", metadata: ["baz": "quc"])
+        testLogging.history.assertExist(level: .info, message: "hello world!", metadata: ["foo": "bar"])
+        testLogging.history.assertExist(level: .warning, message: "hello world!", metadata: ["bar": "baz", "baz": "qux"])
+        testLogging.history.assertExist(level: .error, message: "hello world!", metadata: ["bar": "baz", "baz": "quc"])
     }
 }
