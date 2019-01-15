@@ -196,8 +196,8 @@ The logging metadata is of type `typealias Logging.Metadata = [String: Metadata.
 ```swift
 public enum MetadataValue {
     case string(String)
-    indirect case dictionary(Metadata)
-    indirect case list([Metadata.Value])
+    case dictionary(Metadata)
+    case array([Metadata.Value])
 }
 ```
 
@@ -271,9 +271,9 @@ Logging.bootstrap(ShortestPossibleLogHandler.init)
 
 This API intends to support a number programming models:
 
-1. explicit logger passing (see [`ExplicitLoggerPassingExample.swift`](https://github.com/weissi/swift-server-logging-api-proposal/blob/master/Sources/Examples/ExplicitLoggerPassingExample.swift))
-2. one global logger (see [`OneGlobalLoggerExample.swift`](https://github.com/weissi/swift-server-logging-api-proposal/blob/master/Sources/Examples/OneGlobalLoggerExample.swift))
-3. one logger per sub-system (see [`LoggerPerSubsystemExample.swift`](https://github.com/weissi/swift-server-logging-api-proposal/blob/master/Sources/Examples/LoggerPerSubsystemExample.swift))
+1. Explicit logger passing, ie. handing loggers around as value-typed variables explicitly to everywhere log messages get emitted from.
+2. One global logger, ie. having one global that is _the_ logger.
+3. One logger per sub-system, ie. having a separate logger per sub-system which might be a file, a class, a module, etc.
 
 Because there are fundamental differences with those models it is not mandated whether the `LogHandler` holds the logging configuration (log level and metadata) as a value or as a reference. Both systems make sense and it depends on the architecture of the application and the requirements to decide what is more appropriate.
 
