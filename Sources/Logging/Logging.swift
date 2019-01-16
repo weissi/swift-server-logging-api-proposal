@@ -119,6 +119,7 @@ extension Logging {
 
     public enum MetadataValue {
         case string(String)
+        case stringConvertible(CustomStringConvertible)
         case dictionary(Metadata)
         case array([Metadata.Value])
     }
@@ -146,6 +147,8 @@ extension Logging.MetadataValue: Equatable {
         switch (lhs, rhs) {
         case (.string(let lhs), .string(let rhs)):
             return lhs == rhs
+        case (.stringConvertible(let lhs), .stringConvertible(let rhs)):
+            return lhs.description == rhs.description
         case (.array(let lhs), .array(let rhs)):
             return lhs == rhs
         case (.dictionary(let lhs), .dictionary(let rhs)):
@@ -305,6 +308,8 @@ extension Logging.MetadataValue: CustomStringConvertible {
             return list.map { $0.description }.description
         case .string(let str):
             return str
+        case .stringConvertible(let repr):
+            return repr.description
         }
     }
 }
