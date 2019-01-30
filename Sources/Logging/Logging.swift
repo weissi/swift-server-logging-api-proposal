@@ -66,6 +66,11 @@ public struct Logger {
     }
 
     @inlinable
+    public func fault(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logging.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .fault, message: message, metadata: metadata, error: error, file: file, function: function, line: line)
+    }
+
+    @inlinable
     public subscript(metadataKey metadataKey: String) -> Logging.Metadata.Value? {
         get {
             return self.handler[metadataKey: metadataKey]
@@ -129,6 +134,7 @@ extension Logging {
         case info
         case warning
         case error
+        case fault
     }
 }
 

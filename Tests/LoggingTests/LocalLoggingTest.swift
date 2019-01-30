@@ -17,7 +17,8 @@ class LocalLoggerTest: XCTestCase {
         logging.history.assertExist(level: .info, message: "Struct2::doSomething")
         logging.history.assertExist(level: .info, message: "Struct2::doSomethingElse")
         logging.history.assertExist(level: .error, message: "Struct3::doSomething", metadata: ["bar": "baz"])
-        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElse", metadata: ["bar": "baz"])
+        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElseError", metadata: ["bar": "baz"])
+        logging.history.assertExist(level: .fault, message: "Struct3::doSomethingElseFault", metadata: ["bar": "baz"])
         logging.history.assertExist(level: .warning, message: "Struct3::doSomethingElseAsync", metadata: ["bar": "baz"])
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomething")
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomethingAsync")
@@ -44,7 +45,8 @@ class LocalLoggerTest: XCTestCase {
         logging.history.assertExist(level: .info, message: "Struct2::doSomething") // local context
         logging.history.assertExist(level: .info, message: "Struct2::doSomethingElse") // local context
         logging.history.assertExist(level: .error, message: "Struct3::doSomething", metadata: ["bar": "baz"]) // local context
-        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElse", metadata: ["bar": "baz"]) // local context
+        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElseError", metadata: ["bar": "baz"]) // local context
+        logging.history.assertExist(level: .fault, message: "Struct3::doSomethingElseFault", metadata: ["bar": "baz"]) // local context
         logging.history.assertExist(level: .warning, message: "Struct3::doSomethingElseAsync", metadata: ["bar": "baz"]) // local context
         logging.history.assertNotExist(level: .info, message: "TestLibrary::doSomething") // global context
         logging.history.assertNotExist(level: .info, message: "TestLibrary::doSomethingAsync") // global context
@@ -121,7 +123,8 @@ private struct Struct3 {
     }
 
     private func doSomethingElse(context: Context) {
-        context.logger.error("Struct3::doSomethingElse")
+        context.logger.error("Struct3::doSomethingElseError")
+        context.logger.fault("Struct3::doSomethingElseFault")
         let group = DispatchGroup()
         group.enter()
         queue.async {

@@ -25,12 +25,16 @@ class LoggingTest: XCTestCase {
         logger.error({
             "error"
         }())
-        XCTAssertEqual(3, logging.history.entries.count, "expected number of entries to match")
+        logger.fault({
+            "fault"
+            }())
+        XCTAssertEqual(4, logging.history.entries.count, "expected number of entries to match")
         logging.history.assertNotExist(level: .trace, message: "trace")
         logging.history.assertNotExist(level: .debug, message: "debug")
         logging.history.assertExist(level: .info, message: "info")
         logging.history.assertExist(level: .warning, message: "warning")
         logging.history.assertExist(level: .error, message: "error")
+        logging.history.assertExist(level: .fault, message: "fault")
     }
 
     func testAutoclosureWithError() throws {
@@ -57,12 +61,16 @@ class LoggingTest: XCTestCase {
         logger.error({
             "error"
         }(), error: TestError.boom)
-        XCTAssertEqual(2, logging.history.entries.count, "expected number of entries to match")
+        logger.fault({
+            "fault"
+        }(), error: TestError.boom)
+        XCTAssertEqual(3, logging.history.entries.count, "expected number of entries to match")
         logging.history.assertNotExist(level: .trace, message: "trace", error: TestError.boom)
         logging.history.assertNotExist(level: .debug, message: "debug", error: TestError.boom)
         logging.history.assertNotExist(level: .info, message: "info", error: TestError.boom)
         logging.history.assertExist(level: .warning, message: "warning", error: TestError.boom)
         logging.history.assertExist(level: .error, message: "error", error: TestError.boom)
+        logging.history.assertExist(level: .fault, message: "fault", error: TestError.boom)
     }
 
     func testWithError() throws {
@@ -134,13 +142,14 @@ class LoggingTest: XCTestCase {
         let testLogging = TestLogging()
         Logging.bootstrap(testLogging.make)
         var logger = Logging.make("\(#function)")
-        logger.logLevel = .error
+        logger.logLevel = .fault
 
         logger.debug(self.dontEvaluateThisString(), metadata: ["foo": "\(self.dontEvaluateThisString())"])
         logger.trace(self.dontEvaluateThisString())
         logger.info(self.dontEvaluateThisString())
         logger.warning(self.dontEvaluateThisString())
         logger.log(level: .warning, message: self.dontEvaluateThisString())
+        logger.error(self.dontEvaluateThisString())
     }
 
     func testLocalMetadata() {
@@ -152,8 +161,10 @@ class LoggingTest: XCTestCase {
         logger[metadataKey: "baz"] = "qux"
         logger.warning("hello world!")
         logger.error("hello world!", metadata: ["baz": "quc"])
+        logger.fault("logging fault!", metadata: ["baz": "quc"])
         testLogging.history.assertExist(level: .info, message: "hello world!", metadata: ["foo": "bar"])
         testLogging.history.assertExist(level: .warning, message: "hello world!", metadata: ["bar": "baz", "baz": "qux"])
         testLogging.history.assertExist(level: .error, message: "hello world!", metadata: ["bar": "baz", "baz": "quc"])
+        testLogging.history.assertExist(level: .fault, message: "logging fault!", metadata: ["bar": "baz", "baz": "quc"])
     }
 }

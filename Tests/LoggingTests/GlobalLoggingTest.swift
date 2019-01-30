@@ -16,7 +16,8 @@ class GlobalLoggerTest: XCTestCase {
         logging.history.assertExist(level: .info, message: "Struct2::doSomething")
         logging.history.assertExist(level: .info, message: "Struct2::doSomethingElse")
         logging.history.assertExist(level: .error, message: "Struct3::doSomething")
-        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElse", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElseError", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .fault, message: "Struct3::doSomethingElseFault", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .warning, message: "Struct3::doSomethingElseAsync", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomething", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomethingAsync", metadata: ["foo": "bar"])
@@ -42,7 +43,8 @@ class GlobalLoggerTest: XCTestCase {
         logging.history.assertNotExist(level: .info, message: "Struct2::doSomething")
         logging.history.assertNotExist(level: .info, message: "Struct2::doSomethingElse")
         logging.history.assertExist(level: .error, message: "Struct3::doSomething")
-        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElse", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElseError", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .fault, message: "Struct3::doSomethingElseFault", metadata: ["foo": "bar"])
         logging.history.assertNotExist(level: .warning, message: "Struct3::doSomethingElseAsync", metadata: ["foo": "bar"])
         logging.history.assertNotExist(level: .info, message: "TestLibrary::doSomething", metadata: ["foo": "bar"])
         logging.history.assertNotExist(level: .info, message: "TestLibrary::doSomethingAsync", metadata: ["foo": "bar"])
@@ -70,7 +72,8 @@ class GlobalLoggerTest: XCTestCase {
         logging.history.assertExist(level: .info, message: "Struct2::doSomething")
         logging.history.assertExist(level: .info, message: "Struct2::doSomethingElse")
         logging.history.assertExist(level: .error, message: "Struct3::doSomething")
-        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElse", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .error, message: "Struct3::doSomethingElseError", metadata: ["foo": "bar"])
+        logging.history.assertExist(level: .fault, message: "Struct3::doSomethingElseFault", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .warning, message: "Struct3::doSomethingElseAsync", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomething", metadata: ["foo": "bar"])
         logging.history.assertExist(level: .info, message: "TestLibrary::doSomethingAsync", metadata: ["foo": "bar"])
@@ -127,7 +130,8 @@ private struct Struct3 {
 
     private func doSomethingElse() {
         MDC.global["foo"] = "bar"
-        self.logger.error("Struct3::doSomethingElse")
+        self.logger.error("Struct3::doSomethingElseError")
+        self.logger.fault("Struct3::doSomethingElseFault")
         let group = DispatchGroup()
         group.enter()
         let loggingMetadata = MDC.global.metadata
