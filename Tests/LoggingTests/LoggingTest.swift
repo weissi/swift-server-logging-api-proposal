@@ -140,7 +140,7 @@ class LoggingTest: XCTestCase {
         logger.trace(self.dontEvaluateThisString())
         logger.info(self.dontEvaluateThisString())
         logger.warning(self.dontEvaluateThisString())
-        logger.log(level: .warning, self.dontEvaluateThisString())
+        logger.log(level: .warning, message: self.dontEvaluateThisString())
     }
 
     func testLocalMetadata() {
