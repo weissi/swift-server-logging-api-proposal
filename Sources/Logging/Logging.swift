@@ -34,7 +34,7 @@ public struct Logger {
     }
 
     @inlinable
-    public func log(level: Logger.Level, message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+    func log(level: Logger.Level, message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
         if self.logLevel <= level {
             self.handler.log(level: level, message: message(), metadata: metadata(), error: error, file: file, function: function, line: line)
         }
