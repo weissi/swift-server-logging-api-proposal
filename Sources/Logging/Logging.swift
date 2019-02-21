@@ -98,7 +98,7 @@ public struct Logger {
 
 // This is the logging system itself, it's mostly used to obtain loggers and to set the type of the `LogHandler`
 // implementation.
-public enum Logging {
+public enum LoggingSystem {
     fileprivate static let lock = ReadWriteLock()
     fileprivate static var factory: (String) -> LogHandler = StdoutLogHandler.init
 
@@ -129,7 +129,7 @@ extension Logger {
     }
 
     public init(label: String) {
-        self = Logging.lock.withReaderLock { Logger(Logging.factory(label)) }
+        self = LoggingSystem.lock.withReaderLock { Logger(LoggingSystem.factory(label)) }
     }
 }
 
