@@ -15,7 +15,7 @@ needs to be listed here.
 - Iain Smith <iainsmith@users.noreply.github.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
 - Johannes Weiss <johannesweiss@apple.com>
-- Konrad `ktoso` Malawski <konrad.malawski@project13.pl>
+- Konrad `ktoso` Malawski <ktoso@apple.com>
 - Max Moiseev <moiseev@apple.com>
 - Tanner <me@tanner.xyz>
 - Thomas Krajacic <tkrajacic@users.noreply.github.com>
