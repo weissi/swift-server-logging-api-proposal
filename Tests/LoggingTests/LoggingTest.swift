@@ -206,4 +206,30 @@ class LoggingTest: XCTestCase {
         testLogging.history.assertExist(level: .warning, message: "hello world!", metadata: ["bar": "baz", "baz": "qux"])
         testLogging.history.assertExist(level: .error, message: "hello world!", metadata: ["bar": "baz", "baz": "quc"])
     }
+
+    func testCustomFactory() {
+        struct CustomHandler: LogHandler {
+            func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {}
+
+            subscript(metadataKey _: String) -> Logger.Metadata.Value? {
+                get { return nil }
+                set {}
+            }
+
+            var metadata: Logger.Metadata {
+                get { return Logger.Metadata() }
+                set {}
+            }
+
+            var logLevel: Logger.Level {
+                get { return .info }
+                set {}
+            }
+        }
+
+        let logger1 = Logger(label: "foo")
+        XCTAssertFalse(logger1.handler is CustomHandler, "expected non-custom log handler")
+        let logger2 = Logger(label: "foo", factory: { _ in CustomHandler() })
+        XCTAssertTrue(logger2.handler is CustomHandler, "expected custom log handler")
+    }
 }
