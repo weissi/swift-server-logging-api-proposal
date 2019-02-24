@@ -15,7 +15,6 @@
 // THIS IS NOT PART OF THE PITCH, JUST AN EXAMPLE HOW A LOGGER USAGE LOOKS LIKE
 //
 
-import ExampleImplementation
 import Foundation
 import Logging
 
@@ -24,8 +23,6 @@ import Logging
 // we also allow users to set metadata on the context object and reuse that as the metadata for logging
 enum ContextBasedSystem {
     static func main() {
-        // boostrap with our sample implementation
-        Logging.bootstrap(SimpleLogHandler.init)
         // run the example
         for i in 1 ... 2 {
             print("---------------------------- processing request #\(i) ----------------------------")

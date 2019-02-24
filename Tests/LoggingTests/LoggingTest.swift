@@ -18,7 +18,8 @@ class LoggingTest: XCTestCase {
     func testAutoclosure() throws {
         // bootstrap with our test logging impl
         let logging = TestLogging()
-        Logging.bootstrap(logging.make)
+        LoggingSystem.bootstrapInternal(logging.make)
+        
         var logger = Logger(label: "test")
         logger.logLevel = .info
         logger.log(level: .trace, {
@@ -50,52 +51,11 @@ class LoggingTest: XCTestCase {
         logging.history.assertExist(level: .error, message: "error")
     }
 
-    func testAutoclosureWithError() throws {
-        // bootstrap with our test logging impl
-        let logging = TestLogging()
-        Logging.bootstrap(logging.make)
-        var logger = Logger(label: "test")
-        logger.logLevel = .warning
-        logger.trace({
-            XCTFail("trace should not be called")
-            return "trace"
-        }(), error: TestError.boom)
-        logger.debug({
-            XCTFail("debug should not be called")
-            return "debug"
-        }(), error: TestError.boom)
-        logger.info({
-            XCTFail("info should not be called")
-            return "info"
-        }(), error: TestError.boom)
-        logger.warning({
-            "warning"
-        }(), error: TestError.boom)
-        logger.error({
-            "error"
-        }(), error: TestError.boom)
-        XCTAssertEqual(2, logging.history.entries.count, "expected number of entries to match")
-        logging.history.assertNotExist(level: .trace, message: "trace", error: TestError.boom)
-        logging.history.assertNotExist(level: .debug, message: "debug", error: TestError.boom)
-        logging.history.assertNotExist(level: .info, message: "info", error: TestError.boom)
-        logging.history.assertExist(level: .warning, message: "warning", error: TestError.boom)
-        logging.history.assertExist(level: .error, message: "error", error: TestError.boom)
-    }
-
-    func testWithError() throws {
-        let logging = TestLogging()
-        Logging.bootstrap(logging.make)
-
-        let logger = Logger(label: "test")
-        logger.error("oh no!", error: TestError.boom)
-        logging.history.assertExist(level: .error, message: "oh no!", error: TestError.boom)
-    }
-
     func testMultiplex() throws {
         // bootstrap with our test logging impl
         let logging1 = TestLogging()
         let logging2 = TestLogging()
-        Logging.bootstrap({ MultiplexLogHandler([logging1.make(label: $0), logging2.make(label: $0)]) })
+        LoggingSystem.bootstrapInternal({ MultiplexLogHandler([logging1.make(label: $0), logging2.make(label: $0)]) })
 
         var logger = Logger(label: "test")
         logger.logLevel = .warning
@@ -114,7 +74,8 @@ class LoggingTest: XCTestCase {
 
     func testDictionaryMetadata() {
         let testLogging = TestLogging()
-        Logging.bootstrap(testLogging.make)
+        LoggingSystem.bootstrapInternal(testLogging.make)
+        
         var logger = Logger(label: "\(#function)")
         logger[metadataKey: "foo"] = ["bar": "buz"]
         logger[metadataKey: "empty-dict"] = [:]
@@ -129,7 +90,8 @@ class LoggingTest: XCTestCase {
 
     func testListMetadata() {
         let testLogging = TestLogging()
-        Logging.bootstrap(testLogging.make)
+        LoggingSystem.bootstrapInternal(testLogging.make)
+        
         var logger = Logger(label: "\(#function)")
         logger[metadataKey: "foo"] = ["bar", "buz"]
         logger[metadataKey: "empty-list"] = []
@@ -175,8 +137,9 @@ class LoggingTest: XCTestCase {
 
     func testStringConvertibleMetadata() {
         let testLogging = TestLogging()
-        Logging.bootstrap(testLogging.make)
+        LoggingSystem.bootstrapInternal(testLogging.make)
         var logger = Logger(label: "\(#function)")
+
         logger[metadataKey: "foo"] = .stringConvertible("raw-string")
         let lazyBox = LazyMetadataBox({ "rendered-at-first-use" })
         logger[metadataKey: "lazy"] = .stringConvertible(lazyBox)
@@ -195,7 +158,8 @@ class LoggingTest: XCTestCase {
 
     func testAutoClosuresAreNotForcedUnlessNeeded() {
         let testLogging = TestLogging()
-        Logging.bootstrap(testLogging.make)
+        LoggingSystem.bootstrapInternal(testLogging.make)
+
         var logger = Logger(label: "\(#function)")
         logger.logLevel = .error
 
@@ -208,7 +172,8 @@ class LoggingTest: XCTestCase {
 
     func testLocalMetadata() {
         let testLogging = TestLogging()
-        Logging.bootstrap(testLogging.make)
+        LoggingSystem.bootstrapInternal(testLogging.make)
+
         var logger = Logger(label: "\(#function)")
         logger.info("hello world!", metadata: ["foo": "bar"])
         logger[metadataKey: "bar"] = "baz"
@@ -222,7 +187,7 @@ class LoggingTest: XCTestCase {
 
     func testCustomFactory() {
         struct CustomHandler: LogHandler {
-            func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {}
+            func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, file: StaticString, function: StaticString, line: UInt) {}
 
             subscript(metadataKey _: String) -> Logger.Metadata.Value? {
                 get { return nil }

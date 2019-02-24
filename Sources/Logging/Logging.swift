@@ -23,7 +23,7 @@ public protocol LogHandler {
     // `Logger`'s `info`, `error`, or `warning` functions.
     //
     // An implementation does not need to check the log level because that has been done before by `Logger` itself.
-    func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt)
+    func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, file: StaticString, function: StaticString, line: UInt)
 
     // This adds metadata to a place the concrete logger considers appropriate. Some loggers
     // might not support this feature at all.
@@ -41,41 +41,43 @@ public protocol LogHandler {
 public struct Logger {
     @usableFromInline
     var handler: LogHandler
+    public let label: String
 
-    internal init(_ handler: LogHandler) {
+    internal init(label: String, _ handler: LogHandler) {
+        self.label = label
         self.handler = handler
     }
 
     @inlinable
-    public func log(level: Logger.Level, _ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+    public func log(level: Logger.Level, _ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
         if self.logLevel <= level {
-            self.handler.log(level: level, message: message(), metadata: metadata(), error: error, file: file, function: function, line: line)
+            self.handler.log(level: level, message: message(), metadata: metadata(), file: file, function: function, line: line)
         }
     }
 
     @inlinable
-    public func trace(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-        self.log(level: .trace, message, metadata: metadata, error: error, file: file, function: function, line: line)
+    public func trace(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .trace, message, metadata: metadata, file: file, function: function, line: line)
     }
 
     @inlinable
-    public func debug(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-        self.log(level: .debug, message, metadata: metadata, error: error, file: file, function: function, line: line)
+    public func debug(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .debug, message, metadata: metadata, file: file, function: function, line: line)
     }
 
     @inlinable
-    public func info(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-        self.log(level: .info, message, metadata: metadata, error: error, file: file, function: function, line: line)
+    public func info(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .info, message, metadata: metadata, file: file, function: function, line: line)
     }
 
     @inlinable
-    public func warning(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-        self.log(level: .warning, message, metadata: metadata, error: error, file: file, function: function, line: line)
+    public func warning(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .warning, message, metadata: metadata, file: file, function: function, line: line)
     }
 
     @inlinable
-    public func error(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-        self.log(level: .error, message, metadata: metadata, error: error, file: file, function: function, line: line)
+    public func error(_ message: @autoclosure () -> String, metadata: @autoclosure () -> Logger.Metadata? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+        self.log(level: .error, message, metadata: metadata, file: file, function: function, line: line)
     }
 
     @inlinable
@@ -111,13 +113,23 @@ public struct Logger {
 
 // This is the logging system itself, it's mostly used to obtain loggers and to set the type of the `LogHandler`
 // implementation.
-public enum Logging {
+public enum LoggingSystem {
     fileprivate static let lock = ReadWriteLock()
     fileprivate static var factory: (String) -> LogHandler = StdoutLogHandler.init
+    fileprivate static var initialized = false
 
     // Configures which `LogHandler` to use in the application.
     public static func bootstrap(_ factory: @escaping (String) -> LogHandler) {
         lock.withWriterLock {
+            precondition(!self.initialized, "logging system can only be initialized once per process. currently used factory: \(self.factory)")
+            self.factory = factory
+            self.initialized = true
+        }
+    }
+
+    // for our testing we want to allow multiple bootstraping
+    internal static func bootstrapInternal(_ factory: @escaping (String) -> LogHandler) {
+        self.lock.withWriterLock {
             self.factory = factory
         }
     }
@@ -142,13 +154,13 @@ extension Logger {
     }
 
     public init(label: String) {
-        self = Logging.lock.withReaderLock { Logger(Logging.factory(label)) }
+        self = LoggingSystem.lock.withReaderLock { Logger(label: label, LoggingSystem.factory(label)) }
     }
     
     // this is to provide an escape hatch for situations one must use a custom factory instead of the gloabl one
     // we do not expect this API to be used in normal circumstances, so if you find yourself using it make sure its for a good reason
     public init(label: String, factory: (String) -> LogHandler) {
-        self = Logger(factory(label))
+        self = Logger(label: label, factory(label))
     }
 }
 
@@ -197,9 +209,9 @@ public class MultiplexLogHandler: LogHandler {
         }
     }
 
-    public func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+    public func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, file: StaticString, function: StaticString, line: UInt) {
         self.handlers.forEach { handler in
-            handler.log(level: level, message: message, metadata: metadata, error: error, file: file, function: function, line: line)
+            handler.log(level: level, message: message, metadata: metadata, file: file, function: function, line: line)
         }
     }
 
@@ -257,9 +269,9 @@ internal struct StdoutLogHandler: LogHandler {
         }
     }
 
-    public func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+    public func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, file: StaticString, function: StaticString, line: UInt) {
         let prettyMetadata = metadata?.isEmpty ?? true ? self.prettyMetadata : self.prettify(self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new }))
-        print("\(self.timestamp()) \(level)\(prettyMetadata.map { " \($0)" } ?? "") \(message)\(error.map { " \($0)" } ?? "")")
+        print("\(self.timestamp()) \(level)\(prettyMetadata.map { " \($0)" } ?? "") \(message)")
     }
 
     public var metadata: Logger.Metadata {

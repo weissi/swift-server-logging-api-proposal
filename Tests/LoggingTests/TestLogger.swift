@@ -39,16 +39,16 @@ internal struct TestLogHandler: LogHandler {
         self.label = label
         self.config = config
         self.recorder = recorder
-        self.logger = Logger(StdoutLogHandler(label: label))
+        self.logger = Logger(label: "test", StdoutLogHandler(label: label))
         self.logger.logLevel = .trace
     }
 
-    func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, error: Error?, file: StaticString, function: StaticString, line: UInt) {
+    func log(level: Logger.Level, message: String, metadata: Logger.Metadata?, file: StaticString, function: StaticString, line: UInt) {
         let metadata = (self._metadataSet ? self.metadata : MDC.global.metadata).merging(metadata ?? [:], uniquingKeysWith: { _, new in new })
         var l = logger // local copy since we gonna override its metadata
         l.metadata = metadata
-        l.log(level: level, message, metadata: metadata, error: error, file: file, function: function, line: line)
-        self.recorder.record(level: level, metadata: metadata, message: message, error: error)
+        l.log(level: level, message, metadata: metadata, file: file, function: function, line: line)
+        self.recorder.record(level: level, metadata: metadata, message: message)
     }
 
     private var _logLevel: Logger.Level?
@@ -125,9 +125,9 @@ internal class Recorder: History {
     private let lock = NSLock()
     private var _entries = [LogEntry]()
 
-    func record(level: Logger.Level, metadata: Logger.Metadata?, message: String, error: Error?) {
+    func record(level: Logger.Level, metadata: Logger.Metadata?, message: String) {
         return self.lock.withLock {
-            self._entries.append(LogEntry(level: level, metadata: metadata, message: message, error: error))
+            self._entries.append(LogEntry(level: level, metadata: metadata, message: message))
         }
     }
 
@@ -172,26 +172,24 @@ internal struct LogEntry {
     let level: Logger.Level
     let metadata: Logger.Metadata?
     let message: String
-    let error: Error?
 }
 
 extension History {
-    func assertExist(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, line: UInt = #line) {
-        let entry = self.find(level: level, message: message, metadata: metadata, error: error)
-        XCTAssertNotNil(entry, "entry not found: \(level), \(String(describing: metadata)), \(message) \(String(describing: error))", file: file, line: line)
+    func assertExist(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil, file: StaticString = #file, line: UInt = #line) {
+        let entry = self.find(level: level, message: message, metadata: metadata)
+        XCTAssertNotNil(entry, "entry not found: \(level), \(String(describing: metadata)), \(message) ", file: file, line: line)
     }
 
-    func assertNotExist(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil, error: Error? = nil, file: StaticString = #file, line: UInt = #line) {
-        let entry = self.find(level: level, message: message, metadata: metadata, error: error)
-        XCTAssertNil(entry, "entry was found: \(level), \(String(describing: metadata)), \(message) \(String(describing: error))", file: file, line: line)
+    func assertNotExist(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil, file: StaticString = #file, line: UInt = #line) {
+        let entry = self.find(level: level, message: message, metadata: metadata)
+        XCTAssertNil(entry, "entry was found: \(level), \(String(describing: metadata)), \(message)", file: file, line: line)
     }
 
-    func find(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil, error: Error?) -> LogEntry? {
+    func find(level: Logger.Level, message: String, metadata: Logger.Metadata? = nil) -> LogEntry? {
         return self.entries.first { entry in
             entry.level == level &&
                 entry.message == message &&
-                entry.metadata ?? [:] == metadata ?? [:] &&
-                entry.error?.localizedDescription ?? "" == error?.localizedDescription ?? ""
+                entry.metadata ?? [:] == metadata ?? [:]
         }
     }
 }

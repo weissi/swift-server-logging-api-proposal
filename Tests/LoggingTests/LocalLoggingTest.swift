@@ -18,7 +18,8 @@ class LocalLoggerTest: XCTestCase {
     func test1() throws {
         // bootstrap with our test logging impl
         let logging = TestLogging()
-        Logging.bootstrap(logging.make)
+        LoggingSystem.bootstrapInternal(logging.make)
+
         // change test logging config to log traces and above
         logging.config.set(value: Logger.Level.trace)
         // run our program
@@ -45,7 +46,8 @@ class LocalLoggerTest: XCTestCase {
     func test2() throws {
         // bootstrap with our test logging impl
         let logging = TestLogging()
-        Logging.bootstrap(logging.make)
+        LoggingSystem.bootstrapInternal(logging.make)
+
         // change test logging config to log errors and above
         logging.config.set(value: Logger.Level.error)
         // run our program
